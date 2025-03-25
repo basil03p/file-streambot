@@ -7,3 +7,6 @@ aiofiles
 dnspython
 requests
 jinja2
+pyrogram
+tgcrypto
+flask
