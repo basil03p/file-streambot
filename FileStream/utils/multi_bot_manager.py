@@ -53,20 +53,26 @@ class MultiBotManager:
     
     def get_least_loaded_processor(self) -> Client:
         """Get the processing bot with least current load for backend tasks"""
-        if not self.active:
+        if not self.active or not self.bot_loads:
             return self.main_bot  # Fallback to main bot if no processors available
         
         # Find processing bot with minimum load
-        min_load_bot = min(self.bot_loads.items(), key=lambda x: x[1])
-        return self.processing_bots[min_load_bot[0]]
+        try:
+            min_load_bot = min(self.bot_loads.items(), key=lambda x: x[1])
+            return self.processing_bots[min_load_bot[0]]
+        except (ValueError, KeyError):
+            return self.main_bot  # Fallback if min() fails
     
     def get_random_processor(self) -> Client:
         """Get a random processing bot for load distribution"""
-        if not self.active:
+        if not self.active or not self.processing_bots:
             return self.main_bot  # Fallback to main bot if no processors available
         
-        bot_id = random.choice(list(self.processing_bots.keys()))
-        return self.processing_bots[bot_id]
+        try:
+            bot_id = random.choice(list(self.processing_bots.keys()))
+            return self.processing_bots[bot_id]
+        except (IndexError, KeyError):
+            return self.main_bot  # Fallback if random choice fails
     
     def get_main_bot(self) -> Client:
         """Always return the main bot for user interactions"""
@@ -75,14 +81,14 @@ class MultiBotManager:
     def increment_processor_load(self, bot: Client):
         """Increment load counter for a processing bot"""
         for bot_id, bot_instance in self.processing_bots.items():
-            if bot_instance.id == bot.id:
+            if bot_instance.me.id == bot.me.id:
                 self.bot_loads[bot_id] += 1
                 break
     
     def decrement_processor_load(self, bot: Client):
         """Decrement load counter for a processing bot"""
         for bot_id, bot_instance in self.processing_bots.items():
-            if bot_instance.id == bot.id:
+            if bot_instance.me.id == bot.me.id:
                 self.bot_loads[bot_id] = max(0, self.bot_loads[bot_id] - 1)
                 break
     

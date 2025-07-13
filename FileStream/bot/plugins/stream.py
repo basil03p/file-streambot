@@ -65,13 +65,13 @@ async def private_receive_handler(bot: Client, message: Message):
         await db.add_active_request(message.from_user.id, "file_upload", file_info_preview)
         
         # Increment processing bot load (only if different from main bot)
-        if processing_bot.id != bot.id:
+        if processing_bot.me.id != bot.me.id:
             multi_bot_manager.increment_processor_load(processing_bot)
         
         # Send processing message (always from main bot)
         processing_msg = await message.reply_text(
             text="📤 **Processing your file...**\n\n"
-                 f"🤖 **Backend Processor:** {processing_bot.me.first_name if hasattr(processing_bot, 'me') and processing_bot.id != bot.id else 'Main Bot'}\n"
+                 f"🤖 **Backend Processor:** {processing_bot.me.first_name if hasattr(processing_bot, 'me') and processing_bot.me.id != bot.me.id else 'Main Bot'}\n"
                  "Please wait while I generate the download link.\n\n"
                  "💡 **Tip:** Use /revoke to cancel this request if needed.",
             parse_mode=ParseMode.MARKDOWN,
@@ -91,7 +91,7 @@ async def private_receive_handler(bot: Client, message: Message):
         
         # Add processing info to the response
         processor_info = ""
-        if Telegram.MULTI_BOT_MODE and processing_bot.id != bot.id:
+        if Telegram.MULTI_BOT_MODE and processing_bot.me.id != bot.me.id:
             processor_info = f"\n\n⚡ **Speed Boost:** Processed using backend bot @{processing_bot.me.username if hasattr(processing_bot, 'me') else 'ProcessorBot'}"
         
         await message.reply_text(
@@ -121,7 +121,7 @@ async def private_receive_handler(bot: Client, message: Message):
     finally:
         # Always remove user from active requests and decrement bot load
         await db.remove_active_request(message.from_user.id)
-        if processing_bot.id != bot.id:
+        if processing_bot.me.id != bot.me.id:
             multi_bot_manager.decrement_processor_load(processing_bot)
 
 
@@ -152,7 +152,7 @@ async def channel_receive_handler(bot: Client, message: Message):
 
     try:
         # Increment processing bot load (only if using backend processor)
-        if Telegram.MULTI_BOT_MODE and processing_bot.id != bot.id:
+        if Telegram.MULTI_BOT_MODE and processing_bot.me.id != bot.me.id:
             multi_bot_manager.increment_processor_load(processing_bot)
         
         # Use enhanced file adding for auth channel
@@ -188,7 +188,7 @@ async def channel_receive_handler(bot: Client, message: Message):
         )
 
         # Log multi-bot usage for auth channels (always sent by main bot)
-        if is_auth_channel and Telegram.MULTI_BOT_MODE and processing_bot.id != bot.id:
+        if is_auth_channel and Telegram.MULTI_BOT_MODE and processing_bot.me.id != bot.me.id:
             await bot.send_message(  # Always use main bot for user communication
                 chat_id=Telegram.ULOG_CHANNEL,
                 text=f"📤 **Auth Channel File Processed**\n\n"
@@ -210,6 +210,6 @@ async def channel_receive_handler(bot: Client, message: Message):
         print(f"Cᴀɴ'ᴛ Eᴅɪᴛ Bʀᴏᴀᴅᴄᴀsᴛ Mᴇssᴀɢᴇ!\nEʀʀᴏʀ:  **Gɪᴠᴇ ᴍᴇ ᴇᴅɪᴛ ᴘᴇʀᴍɪssɪᴏɴ ɪɴ ᴜᴘᴅᴀᴛᴇs ᴀɴᴅ ʙɪɴ Cʜᴀɴɴᴇʟ!{e}**")
     finally:
         # Decrement processing bot load (only if using backend processor)
-        if Telegram.MULTI_BOT_MODE and processing_bot.id != bot.id:
+        if Telegram.MULTI_BOT_MODE and processing_bot.me.id != bot.me.id:
             multi_bot_manager.decrement_processor_load(processing_bot)
 
