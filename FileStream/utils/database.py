@@ -12,6 +12,7 @@ class Database:
         self.col = self.db.users
         self.black = self.db.blacklist
         self.file = self.db.file
+        self.requests = self.db.active_requests  # New collection for tracking active requests
 
 #---------------------[ NEW USER ]---------------------#
     def new_user(self, id):
@@ -69,6 +70,7 @@ class Database:
 # ---------------------[ ADD FILE TO DB ]---------------------#
     async def add_file(self, file_info):
         file_info["time"] = time.time()
+        file_info["expires_at"] = time.time() + 3600  # Add expiration time (1 hour)
         fetch_old = await self.get_file_by_fileuniqueid(file_info["user_id"], file_info["file_unique_id"])
         if fetch_old:
             return fetch_old["_id"]
@@ -132,3 +134,108 @@ class Database:
             await self.col.update_one({"id": id}, {"$inc": {"Links": -1}})
         elif operation == "+":
             await self.col.update_one({"id": id}, {"$inc": {"Links": 1}})
+
+# ---------------------[ NEW REQUEST TRACKING METHODS ]---------------------#
+    async def is_user_requesting(self, user_id):
+        """Check if user has an active request"""
+        active_request = await self.requests.find_one({"user_id": user_id})
+        if active_request:
+            # Check if request is still valid (not older than 5 minutes)
+            if time.time() - active_request["start_time"] < 300:  # 5 minutes timeout
+                return True
+            else:
+                # Remove expired request
+                await self.requests.delete_one({"user_id": user_id})
+        return False
+
+    async def add_active_request(self, user_id, request_type="file_upload", file_info=None):
+        """Add user to active requests with additional info"""
+        request_data = {
+            "user_id": user_id,
+            "start_time": time.time(),
+            "request_type": request_type,
+            "status": "processing"
+        }
+        if file_info:
+            request_data["file_info"] = file_info
+        
+        await self.requests.insert_one(request_data)
+
+    async def update_request_status(self, user_id, status):
+        """Update request status"""
+        await self.requests.update_one(
+            {"user_id": user_id},
+            {"$set": {"status": status, "updated_time": time.time()}}
+        )
+
+    async def get_user_active_request(self, user_id):
+        """Get user's active request details"""
+        return await self.requests.find_one({"user_id": user_id})
+
+    async def revoke_user_request(self, user_id):
+        """Revoke/cancel user's active request"""
+        active_request = await self.requests.find_one({"user_id": user_id})
+        if active_request:
+            await self.requests.delete_one({"user_id": user_id})
+            return True
+        return False
+
+    async def remove_active_request(self, user_id):
+        """Remove user from active requests"""
+        await self.requests.delete_one({"user_id": user_id})
+
+# ---------------------[ CHANNEL FILE METHODS ]---------------------#
+    async def add_channel_file(self, file_info, channel_id):
+        """Add file from authorized channel with special handling"""
+        file_info["time"] = time.time()
+        file_info["expires_at"] = time.time() + 3600  # 1 hour expiration
+        file_info["from_auth_channel"] = True
+        file_info["auth_channel_id"] = channel_id
+        file_info["download_enabled"] = True  # Enable download links for auth channel files
+        
+        fetch_old = await self.get_file_by_fileuniqueid(file_info["user_id"], file_info["file_unique_id"])
+        if fetch_old:
+            return fetch_old["_id"]
+        
+        await self.count_links(file_info["user_id"], "+")
+        return (await self.file.insert_one(file_info)).inserted_id
+
+    async def is_auth_channel_file(self, file_id):
+        """Check if file is from authorized channel"""
+        try:
+            file_info = await self.get_file(file_id)
+            return file_info.get("from_auth_channel", False)
+        except:
+            return False
+
+    async def get_channel_files_count(self, channel_id):
+        """Get count of files from specific channel"""
+        return await self.file.count_documents({"auth_channel_id": channel_id})
+
+# ---------------------[ FILE CLEANUP METHODS ]---------------------#
+    async def get_expired_files(self):
+        """Get all files that have expired (older than 1 hour)"""
+        current_time = time.time()
+        expired_files = self.file.find({"expires_at": {"$lt": current_time}})
+        return expired_files
+
+    async def delete_expired_files(self):
+        """Delete all expired files from database"""
+        current_time = time.time()
+        expired_files = await self.file.find({"expires_at": {"$lt": current_time}}).to_list(None)
+        
+        deleted_count = 0
+        for file_doc in expired_files:
+            # Decrease user's link count
+            await self.count_links(file_doc["user_id"], "-")
+            deleted_count += 1
+        
+        # Delete all expired files
+        result = await self.file.delete_many({"expires_at": {"$lt": current_time}})
+        return result.deleted_count
+
+    async def cleanup_old_requests(self):
+        """Clean up old active requests (older than 5 minutes)"""
+        old_time = time.time() - 300  # 5 minutes ago
+        result = await self.requests.delete_many({"start_time": {"$lt": old_time}})
+        return result.deleted_count

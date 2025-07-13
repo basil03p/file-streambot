@@ -8,14 +8,14 @@ class Telegram:
     API_HASH = str(env.get("API_HASH"))
     BOT_TOKEN = str(env.get("BOT_TOKEN"))
     OWNER_ID = int(env.get('OWNER_ID', '7978482443'))
-    WORKERS = int(env.get("WORKERS", "6"))  # 6 workers = 6 commands at once
+    WORKERS = int(env.get("WORKERS", "8"))  # Increased workers for better performance
     DATABASE_URL = str(env.get('DATABASE_URL'))
     UPDATES_CHANNEL = str(env.get('UPDATES_CHANNEL', "Telegram"))
     SESSION_NAME = str(env.get('SESSION_NAME', 'FileStream'))
     FORCE_SUB_ID = env.get('FORCE_SUB_ID', None)
     FORCE_SUB = env.get('FORCE_UPDATES_CHANNEL', False)
     FORCE_SUB = True if str(FORCE_SUB).lower() == "true" else False
-    SLEEP_THRESHOLD = int(env.get("SLEEP_THRESHOLD", "60"))
+    SLEEP_THRESHOLD = int(env.get("SLEEP_THRESHOLD", "30"))  # Reduced for faster response
     FILE_PIC = env.get('FILE_PIC', "https://graph.org/file/5bb9935be0229adf98b73.jpg")
     START_PIC = env.get('START_PIC', "https://graph.org/file/290af25276fa34fa8f0aa.jpg")
     VERIFY_PIC = env.get('VERIFY_PIC', "https://graph.org/file/736e21cc0efa4d8c2a0e4.jpg")
@@ -25,6 +25,20 @@ class Telegram:
     MODE = env.get("MODE", "primary")
     SECONDARY = True if MODE.lower() == "secondary" else False
     AUTH_USERS = list(set(int(x) for x in str(env.get("AUTH_USERS", "")).split()))
+    
+    # Multi-bot configuration
+    MULTI_BOT_MODE = str(env.get("MULTI_BOT_MODE", "false")).lower() == "true"
+    AUTH_CHANNEL = env.get('AUTH_CHANNEL', None)  # Channel ID for authorized channel
+    
+    # Multiple bot tokens for load balancing
+    MULTI_TOKENS = []
+    for i in range(1, 11):  # Support up to 10 additional bot tokens
+        token = env.get(f'MULTITOKEN{i}')
+        if token:
+            MULTI_TOKENS.append(token)
+    
+    # Download link generation for auth channel files
+    GENERATE_DOWNLOAD_LINKS = str(env.get("GENERATE_DOWNLOAD_LINKS", "true")).lower() == "true"
 
 class Server:
     PORT = int(env.get("PORT", 8080))

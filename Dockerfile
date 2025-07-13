@@ -1,11 +1,33 @@
-FROM python:3.11
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . /app
 
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Copy requirements first for better caching
+COPY requirements.txt .
 
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
 COPY . .
+
+# Set environment variables for production
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONOPTIMIZE=1
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port (Koyeb will set PORT env var)
+EXPOSE 8080
 
 CMD ["python", "-m", "FileStream"]

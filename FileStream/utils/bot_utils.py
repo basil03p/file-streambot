@@ -7,6 +7,7 @@ from FileStream.utils.human_readable import humanbytes
 from FileStream.config import Telegram, Server
 from FileStream.bot import FileStream
 import asyncio
+import time
 from typing import (
     Union
 )
@@ -84,6 +85,25 @@ async def gen_link(_id):
     file_name = file_info['file_name']
     file_size = humanbytes(file_info['file_size'])
     mime_type = file_info['mime_type']
+    
+    # Calculate remaining time
+    current_time = time.time()
+    expires_at = file_info.get('expires_at', current_time + 3600)  # Fallback for old files
+    remaining_seconds = int(expires_at - current_time)
+    
+    if remaining_seconds <= 0:
+        # File has expired
+        await db.delete_one_file(file_info['_id'])
+        await db.count_links(file_info['user_id'], "-")
+        raise Exception("File has expired")
+    
+    # Format remaining time
+    remaining_minutes = remaining_seconds // 60
+    remaining_hours = remaining_minutes // 60
+    if remaining_hours > 0:
+        time_remaining = f"{remaining_hours}h {remaining_minutes % 60}m"
+    else:
+        time_remaining = f"{remaining_minutes}m"
 
     page_link = f"{Server.URL}watch/{_id}"
     stream_link = f"{Server.URL}dl/{_id}"
@@ -91,6 +111,7 @@ async def gen_link(_id):
 
     if "video" in mime_type:
         stream_text = LANG.STREAM_TEXT.format(file_name, file_size, stream_link, page_link, file_link)
+        stream_text += f"\n\n⏰ **Link expires in:** {time_remaining}"
         reply_markup = InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("sᴛʀᴇᴀᴍ", url=page_link), InlineKeyboardButton("ᴅᴏᴡɴʟᴏᴀᴅ", url=stream_link)],
@@ -100,6 +121,7 @@ async def gen_link(_id):
         )
     else:
         stream_text = LANG.STREAM_TEXT_X.format(file_name, file_size, stream_link, file_link)
+        stream_text += f"\n\n⏰ **Link expires in:** {time_remaining}"
         reply_markup = InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("ᴅᴏᴡɴʟᴏᴀᴅ", url=stream_link)],

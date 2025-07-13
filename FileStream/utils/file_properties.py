@@ -16,7 +16,24 @@ db = Database(Telegram.DATABASE_URL, Telegram.SESSION_NAME)
 
 async def get_file_ids(client: Client | bool, db_id: str, multi_clients, message) -> Optional[FileId]:
     logging.debug("Starting of get_file_ids")
-    file_info = await db.get_file(db_id)
+    
+    try:
+        file_info = await db.get_file(db_id)
+    except Exception:
+        # File not found, may have been deleted or expired
+        raise Exception("File not found or has been deleted")
+    
+    # Check if file has expired
+    import time
+    current_time = time.time()
+    expires_at = file_info.get('expires_at', current_time + 3600)  # Fallback for old files
+    
+    if current_time >= expires_at:
+        # File has expired, delete it
+        await db.delete_one_file(file_info['_id'])
+        await db.count_links(file_info['user_id'], "-")
+        raise Exception("File has expired and has been automatically deleted")
+    
     if (not "file_ids" in file_info) or not client:
         logging.debug("Storing file_id of all clients in DB")
         log_msg = await send_file(FileStream, db_id, file_info['file_id'], message)

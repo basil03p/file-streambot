@@ -2,6 +2,7 @@ import sys
 import asyncio
 import logging
 import traceback
+import os
 import logging.handlers as handlers
 from FileStream.config import Telegram, Server
 from aiohttp import web
@@ -9,33 +10,20 @@ from pyrogram import idle
 from FileStream.bot import FileStream
 from FileStream.server import web_server
 from FileStream.bot.clients import initialize_clients
-from flask import Flask
-import threading
+from FileStream.utils.background_tasks import background_tasks
+from FileStream.utils.multi_bot_manager import multi_bot_manager
 import signal
 
-# Flask Server to Keep Service Alive
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is running"
-
-def run_flask():
-    app.run(host="0.0.0.0", port=8080, use_reloader=False)
-
-# Start Flask in a background thread
-flask_thread = threading.Thread(target=run_flask)
-flask_thread.daemon = True
-flask_thread.start()
-
-# Logging Configuration
+# Remove Flask to avoid port conflicts - aiohttp will handle everything
+# Koyeb-optimized logging configuration
 logging.basicConfig(
     level=logging.INFO,
     datefmt="%d/%m/%Y %H:%M:%S",
     format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(stream=sys.stdout),
-        handlers.RotatingFileHandler("streambot.log", mode="a", maxBytes=104857600, backupCount=2, encoding="utf-8"),
+        # Reduced log file size for Koyeb
+        handlers.RotatingFileHandler("streambot.log", mode="a", maxBytes=10485760, backupCount=1, encoding="utf-8"),
     ],
 )
 
@@ -61,22 +49,48 @@ async def start_services():
     await initialize_clients()
     print("------------------------------ DONE ------------------------------\n")
 
+    print("--------------------- Initializing Multi-Bot System ---------------")
+    if Telegram.MULTI_BOT_MODE:
+        await multi_bot_manager.initialize_multi_bots(FileStream)
+        stats = multi_bot_manager.get_bot_stats()
+        print(f"Multi-bot system: {'✅ Active' if stats['active'] else '❌ Inactive'}")
+        print(f"Main bot (user interactions): {stats['main_bot']}")
+        print(f"Backend processors available: {stats['total_processors']}")
+        if Telegram.AUTH_CHANNEL:
+            print(f"Auth channel configured: {Telegram.AUTH_CHANNEL}")
+    else:
+        print("Multi-bot mode: ❌ Disabled")
+    print("------------------------------ DONE ------------------------------\n")
+
+    print("--------------------- Starting Background Tasks -------------------")
+    await background_tasks.start_background_tasks()
+    print("------------------------------ DONE ------------------------------\n")
+
     print("--------------------- Initializing Web Server ---------------------")
     await server.setup()
-    await web.TCPSite(server, Server.BIND_ADDRESS, Server.PORT).start()
+    # Use environment port if available (Koyeb compatibility)
+    port = int(os.environ.get("PORT", Server.PORT))
+    bind_addr = os.environ.get("HOST", Server.BIND_ADDRESS)
+    
+    await web.TCPSite(server, bind_addr, port).start()
     print("------------------------------ DONE ------------------------------\n")
 
     print("------------------------- Service Started -------------------------")
     print("                        bot =>> {}".format(bot_info.first_name))
     if bot_info.dc_id:
         print("                        DC ID =>> {}".format(str(bot_info.dc_id)))
-    print(" URL =>> {}".format(Server.URL))
+    print("                        Port =>> {}".format(port))
+    print("                        Host =>> {}".format(bind_addr))
     print("------------------------------------------------------------------")
     
-    await idle()
+    # Keep the service alive without blocking
+    while True:
+        await asyncio.sleep(30)  # Keep alive ping every 30 seconds
 
 async def cleanup():
     print("Received shutdown signal. Cleaning up...")
+    await background_tasks.stop_background_tasks()
+    await multi_bot_manager.stop_all_bots()
     await server.cleanup()
     await FileStream.stop()
 

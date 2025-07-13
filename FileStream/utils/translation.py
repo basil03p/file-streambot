@@ -10,10 +10,29 @@ class LANG(object):
 <b>💕 @{}</b>\n"""
 
     HELP_TEXT = """
+<b>🤖 Bot Commands:</b>
+
+<b>📤 File Upload:</b>
 <b>- ᴀᴅᴅ ᴍᴇ ᴀs ᴀɴ ᴀᴅᴍɪɴ ᴏɴ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ</b>
 <b>- sᴇɴᴅ ᴍᴇ ᴀɴʏ ᴅᴏᴄᴜᴍᴇɴᴛ ᴏʀ ᴍᴇᴅɪᴀ</b>
-<b>- ɪ'ʟʟ ᴘʀᴏᴠɪᴅᴇ sᴛʀᴇᴀᴍᴀʙʟᴇ ʟɪɴᴋ</b>\n
-<b>🔞 ᴀᴅᴜʟᴛ ᴄᴏɴᴛᴇɴᴛ sᴛʀɪᴄᴛʟʏ ᴘʀᴏʜɪʙɪᴛᴇᴅ.</b>\n
+<b>- ɪ'ʟʟ ᴘʀᴏᴠɪᴅᴇ sᴛʀᴇᴀᴍᴀʙʟᴇ ʟɪɴᴋ</b>
+
+<b>🔧 Request Management:</b>
+<b>/revoke</b> - Cancel your active request
+<b>/status</b> - Check your request status
+<b>/files</b> - View your uploaded files
+
+<b>⚡ Multi-Bot Features:</b>
+• Enhanced speed for auth channel files
+• Load balancing across multiple bots
+• Improved reliability during high usage
+
+<b>⏰ Auto-Deletion:</b>
+• Files expire after 1 hour
+• Only one request at a time per user
+
+<b>🔞 ᴀᴅᴜʟᴛ ᴄᴏɴᴛᴇɴᴛ sᴛʀɪᴄᴛʟʏ ᴘʀᴏʜɪʙɪᴛᴇᴅ.</b>
+
 <i><b> ʀᴇᴘᴏʀᴛ ʙᴜɢs ᴛᴏ <a href='https://telegram.me/AvishkarPatil'>ᴅᴇᴠᴇʟᴏᴘᴇʀ</a></b></i>"""
 
     ABOUT_TEXT = """

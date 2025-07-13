@@ -24,16 +24,18 @@ async def initialize_clients():
     async def start_client(client_id, token):
         try:
             if len(token) >= 100:
-                session_string=token
-                bot_token=None
+                session_string = token
+                bot_token = None
                 print(f'Starting Client - {client_id} Using Session String')
             else:
-                session_string=None
-                bot_token=token
+                session_string = None
+                bot_token = token
                 print(f'Starting Client - {client_id} Using Bot Token')
+            
             if client_id == len(all_tokens):
                 await asyncio.sleep(2)
                 print("This will take some time, please wait...")
+            
             client = await Client(
                 name=str(client_id),
                 api_id=Telegram.API_ID,
@@ -43,15 +45,27 @@ async def initialize_clients():
                 no_updates=True,
                 session_string=session_string,
                 in_memory=True,
+                max_concurrent_transmissions=10,  # Optimize for speed
             ).start()
+            
             client.id = (await client.get_me()).id
             work_loads[client_id] = 0
             return client_id, client
-        except Exception:
-            logging.error(f"Failed starting Client - {client_id} Error:", exc_info=True)
+        except Exception as e:
+            logging.error(f"Failed starting Client - {client_id} Error: {e}", exc_info=True)
+            return None
     
     clients = await asyncio.gather(*[start_client(i, token) for i, token in all_tokens.items()])
-    multi_clients.update(dict(clients))
+    # Filter out None values from failed clients
+    successful_clients = [c for c in clients if c is not None]
+    multi_clients.update(dict(successful_clients))
+    
+    # Ensure we always have at least one client available
+    if not multi_clients:
+        multi_clients[0] = FileStream
+        work_loads[0] = 0
+        print("All additional clients failed, falling back to default client")
+    
     if len(multi_clients) != 1:
         Telegram.MULTI_CLIENT = True
         print("Multi-Client Mode Enabled")
