@@ -12,8 +12,11 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies with compatible versions
 RUN pip install --no-cache-dir --upgrade pip
+# Install compatible MongoDB drivers first
+RUN pip install --no-cache-dir motor==3.5.1 pymongo==4.8.0
+# Install the rest of the requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
