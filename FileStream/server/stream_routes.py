@@ -66,8 +66,29 @@ class_cache = {}
 async def media_streamer(request: web.Request, db_id: str):
     range_header = request.headers.get("Range", 0)
     
-    index = min(work_loads, key=work_loads.get)
-    faster_client = multi_clients[index]
+    # Enhanced error handling for empty work_loads
+    if not work_loads:
+        logging.error("No clients available - work_loads is empty")
+        raise web.HTTPServiceUnavailable(text="No clients available")
+    
+    try:
+        # Safe client selection with fallback
+        index = min(work_loads, key=work_loads.get)
+        if index not in multi_clients:
+            # Fallback to first available client
+            index = next(iter(multi_clients.keys()))
+            logging.warning(f"Selected client {index} not in multi_clients, using fallback")
+        
+        faster_client = multi_clients[index]
+    except (ValueError, KeyError) as e:
+        logging.error(f"Error selecting client: {e}")
+        # Emergency fallback to any available client
+        if multi_clients:
+            index = next(iter(multi_clients.keys()))
+            faster_client = multi_clients[index]
+            logging.warning(f"Using emergency fallback client {index}")
+        else:
+            raise web.HTTPServiceUnavailable(text="No clients available")
     
     if Telegram.MULTI_CLIENT:
         logging.info(f"Client {index} is now serving {request.headers.get('X-FORWARDED-FOR',request.remote)}")
@@ -100,7 +121,8 @@ async def media_streamer(request: web.Request, db_id: str):
             headers={"Content-Range": f"bytes */{file_size}"},
         )
 
-    chunk_size = 1024 * 1024
+    # Optimize chunk size for better performance
+    chunk_size = 1024 * 1024 * 2  # 2MB chunks for better speed
     until_bytes = min(until_bytes, file_size - 1)
 
     offset = from_bytes - (from_bytes % chunk_size)
@@ -109,6 +131,18 @@ async def media_streamer(request: web.Request, db_id: str):
 
     req_length = until_bytes - from_bytes + 1
     part_count = math.ceil(until_bytes / chunk_size) - math.floor(offset / chunk_size)
+    
+    # Enhanced headers for better download speed
+    headers = {
+        "Content-Type": f"{mime_type}",
+        "Content-Range": f"bytes {from_bytes}-{until_bytes}/{file_size}",
+        "Content-Length": str(req_length),
+        "Content-Disposition": f'{disposition}; filename="{file_name}"',
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "public, max-age=86400",  # 24 hours cache
+        "ETag": f'"{db_id}-{file_size}"',
+        "Connection": "keep-alive",
+    }
     body = tg_connect.yield_file(
         file_id, index, offset, first_part_cut, last_part_cut, part_count, chunk_size
     )
@@ -126,11 +160,36 @@ async def media_streamer(request: web.Request, db_id: str):
     return web.Response(
         status=206 if range_header else 200,
         body=body,
-        headers={
-            "Content-Type": f"{mime_type}",
-            "Content-Range": f"bytes {from_bytes}-{until_bytes}/{file_size}",
-            "Content-Length": str(req_length),
-            "Content-Disposition": f'{disposition}; filename="{file_name}"',
-            "Accept-Ranges": "bytes",
-        },
+        headers=headers,
     )
+
+@routes.get("/health", allow_head=True)
+async def health_check(_):
+    """Health check endpoint for Koyeb"""
+    return web.json_response({
+        "status": "healthy",
+        "timestamp": int(time.time()),
+        "clients": len(multi_clients),
+        "service": "FileStreamBot"
+    })
+
+@routes.get("/", allow_head=True)
+async def home_route(_):
+    """Home route to prevent 404 on root"""
+    return web.json_response({
+        "service": "FileStreamBot",
+        "status": "running",
+        "version": __version__
+    })
+
+# Add caching middleware for better performance
+@web.middleware
+async def cache_middleware(request, handler):
+    # Add cache headers for static content
+    if request.path.startswith(('/dl/', '/watch/')):
+        response = await handler(request)
+        if response.status == 200:
+            response.headers['Cache-Control'] = 'public, max-age=86400'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+        return response
+    return await handler(request)

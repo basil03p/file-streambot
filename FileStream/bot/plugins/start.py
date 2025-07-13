@@ -40,6 +40,19 @@ async def start(bot: Client, message: Message):
             try:
                 file_check = await db.get_file(usr_cmd)
                 file_id = str(file_check['_id'])
+                
+                # Check if file has expired
+                import time
+                current_time = time.time()
+                expires_at = file_check.get('expires_at', current_time + 3600)
+                
+                if current_time >= expires_at:
+                    # File has expired, delete it and notify user
+                    await db.delete_one_file(file_check['_id'])
+                    await db.count_links(file_check['user_id'], "-")
+                    await message.reply_text("⏰ **File has expired!**\n\nThis file was automatically deleted after 1 hour. Please request a new download link.")
+                    return
+                
                 if file_id == usr_cmd:
                     reply_markup, stream_text = await gen_linkx(m=message, _id=file_id,
                                                                 name=[FileStream.username, FileStream.fname])
@@ -63,6 +76,19 @@ async def start(bot: Client, message: Message):
                 db_id = str(file_check['_id'])
                 file_id = file_check['file_id']
                 file_name = file_check['file_name']
+                
+                # Check if file has expired
+                import time
+                current_time = time.time()
+                expires_at = file_check.get('expires_at', current_time + 3600)
+                
+                if current_time >= expires_at:
+                    # File has expired, delete it and notify user
+                    await db.delete_one_file(file_check['_id'])
+                    await db.count_links(file_check['user_id'], "-")
+                    await message.reply_text("⏰ **File has expired!**\n\nThis file was automatically deleted after 1 hour. Please request a new download link.")
+                    return
+                
                 if db_id == usr_cmd:
                     filex = await message.reply_cached_media(file_id=file_id, caption=f'**{file_name}**')
                     await asyncio.sleep(3600)

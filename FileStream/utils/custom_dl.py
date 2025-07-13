@@ -11,9 +11,10 @@ from pyrogram.types import Message
 
 class ByteStreamer:
     def __init__(self, client: Client):
-        self.clean_timer = 30 * 60
+        self.clean_timer = 15 * 60  # Reduced to 15 minutes for better memory management
         self.client: Client = client
         self.cached_file_ids: Dict[str, FileId] = {}
+        self.max_cache_size = 100  # Limit cache size
         asyncio.create_task(self.clean_cache())
 
     async def get_file_properties(self, db_id: str, multi_clients) -> FileId:
@@ -22,7 +23,14 @@ class ByteStreamer:
         if the properties are cached, then it'll return the cached results.
         or it'll generate the properties from the Message ID and cache them.
         """
-        if not db_id in self.cached_file_ids:
+        if db_id not in self.cached_file_ids:
+            # Cache size management
+            if len(self.cached_file_ids) >= self.max_cache_size:
+                # Remove oldest entries (simple FIFO)
+                for _ in range(10):  # Remove 10 oldest entries
+                    if self.cached_file_ids:
+                        self.cached_file_ids.pop(next(iter(self.cached_file_ids)))
+            
             logging.debug("Before Calling generate_file_properties")
             await self.generate_file_properties(db_id, multi_clients)
             logging.debug(f"Cached file properties for file with ID {db_id}")
