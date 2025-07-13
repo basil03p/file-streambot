@@ -39,6 +39,9 @@ class MultiBotManager:
                 await bot.start()
                 bot_info = await bot.get_me()
                 
+                # Ensure bot.me is set for compatibility
+                bot.me = bot_info
+                
                 self.processing_bots[bot_id] = bot
                 self.bot_loads[bot_id] = 0
                 

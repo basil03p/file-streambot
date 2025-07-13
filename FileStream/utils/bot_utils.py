@@ -15,6 +15,20 @@ from typing import (
 
 db = Database(Telegram.DATABASE_URL, Telegram.SESSION_NAME)
 
+def get_bot_for_channel(channel_id, fallback_bot=None):
+    """
+    Returns the appropriate bot for different channel operations:
+    - FLOG_CHANNEL: Uses multi-bot clients (for file operations)
+    - ULOG_CHANNEL: Always uses main bot (for user activity logs)
+    - Other channels: Uses fallback_bot or main bot
+    """
+    if channel_id == Telegram.ULOG_CHANNEL:
+        return FileStream  # Always use main bot for user logs
+    elif channel_id == Telegram.FLOG_CHANNEL and fallback_bot:
+        return fallback_bot  # Use provided bot (can be multi-bot)
+    else:
+        return fallback_bot or FileStream  # Default to main bot
+
 async def get_invite_link(bot, chat_id: Union[str, int]):
     try:
         invite_link = await bot.create_chat_invite_link(chat_id=chat_id)
@@ -208,7 +222,7 @@ async def is_user_authorized(message):
 async def is_user_exist(bot, message):
     if not bool(await db.get_user(message.from_user.id)):
         await db.add_user(message.from_user.id)
-        await bot.send_message(
+        await FileStream.send_message(
             Telegram.ULOG_CHANNEL,
             f"**#NᴇᴡUsᴇʀ**\n**⬩ ᴜsᴇʀ ɴᴀᴍᴇ :** [{message.from_user.first_name}](tg://user?id={message.from_user.id})\n**⬩ ᴜsᴇʀ ɪᴅ :** `{message.from_user.id}`"
         )
@@ -217,7 +231,7 @@ async def is_channel_exist(bot, message):
     if not bool(await db.get_user(message.chat.id)):
         await db.add_user(message.chat.id)
         members = await bot.get_chat_members_count(message.chat.id)
-        await bot.send_message(
+        await FileStream.send_message(
             Telegram.ULOG_CHANNEL,
             f"**#NᴇᴡCʜᴀɴɴᴇʟ** \n**⬩ ᴄʜᴀᴛ ɴᴀᴍᴇ :** `{message.chat.title}`\n**⬩ ᴄʜᴀᴛ ɪᴅ :** `{message.chat.id}`\n**⬩ ᴛᴏᴛᴀʟ ᴍᴇᴍʙᴇʀs :** `{members}`"
         )

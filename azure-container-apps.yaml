@@ -1,0 +1,177 @@
+# Azure Container Apps configuration
+# Deploy FileStreamBot to Azure Container Apps with auto-scaling
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filestream-bot
+  labels:
+    app: filestream-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: filestream-bot
+  template:
+    metadata:
+      labels:
+        app: filestream-bot
+    spec:
+      containers:
+      - name: filestream-bot
+        image: your-dockerhub-username/filestream-bot:latest
+        ports:
+        - containerPort: 8080
+        env:
+        # Core Configuration
+        - name: API_ID
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: api-id
+        - name: API_HASH
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: api-hash
+        - name: BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: bot-token
+        - name: OWNER_ID
+          value: "1611849472"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: database-url
+        
+        # Multi-Bot Configuration
+        - name: MULTI_BOT_MODE
+          value: "true"
+        - name: MULTITOKEN1
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: multitoken1
+        - name: MULTITOKEN2
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: multitoken2
+        - name: MULTITOKEN3
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: multitoken3
+        - name: MULTITOKEN4
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: multitoken4
+        - name: MULTITOKEN5
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: multitoken5
+        - name: MULTITOKEN6
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: multitoken6
+        - name: MULTITOKEN7
+          valueFrom:
+            secretKeyRef:
+              name: filestream-secrets
+              key: multitoken7
+        
+        # Web Server Configuration
+        - name: PORT
+          value: "8080"
+        - name: BIND_ADDRESS
+          value: "0.0.0.0"
+        - name: HAS_SSL
+          value: "true"
+        - name: NO_PORT
+          value: "true"
+        
+        # Channel Configuration
+        - name: AUTH_CHANNEL
+          value: "-1002036635078"
+        - name: GENERATE_DOWNLOAD_LINKS
+          value: "true"
+        - name: FLOG_CHANNEL
+          value: "-1002531606586"
+        - name: ULOG_CHANNEL
+          value: "-1002531606586"
+        - name: FORCE_SUB_ID
+          value: "-1002036635078"
+        - name: FORCE_SUB
+          value: "true"
+        
+        # Performance Settings
+        - name: BOT_WORKERS
+          value: "10"
+        - name: SESSION_NAME
+          value: "StreamBot"
+        - name: FILE_EXPIRATION_TIME
+          value: "3600"
+        - name: REQUEST_TIMEOUT
+          value: "300"
+        
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filestream-service
+spec:
+  selector:
+    app: filestream-bot
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: filestream-secrets
+type: Opaque
+data:
+  # Base64 encoded values - replace with your actual base64 encoded secrets
+  api-id: eW91cl9hcGlfaWQ=  # your_api_id
+  api-hash: eW91cl9hcGlfaGFzaA==  # your_api_hash
+  bot-token: eW91cl9ib3RfdG9rZW4=  # your_bot_token
+  database-url: eW91cl9kYXRhYmFzZV91cmw=  # your_database_url
+  multitoken1: eW91cl9tdWx0aXRva2VuMQ==  # your_multitoken1
+  multitoken2: eW91cl9tdWx0aXRva2VuMg==  # your_multitoken2
+  multitoken3: eW91cl9tdWx0aXRva2VuMw==  # your_multitoken3
+  multitoken4: eW91cl9tdWx0aXRva2VuNA==  # your_multitoken4
+  multitoken5: eW91cl9tdWx0aXRva2VuNQ==  # your_multitoken5
+  multitoken6: eW91cl9tdWx0aXRva2VuNg==  # your_multitoken6
+  multitoken7: eW91cl9tdWx0aXRva2VuNw==  # your_multitoken7

@@ -108,7 +108,7 @@ async def private_receive_handler(bot: Client, message: Message):
     except FloodWait as e:
         print(f"Sleeping for {str(e.value)}s")
         await asyncio.sleep(e.value)
-        await bot.send_message(chat_id=Telegram.ULOG_CHANNEL,
+        await FileStream.send_message(chat_id=Telegram.ULOG_CHANNEL,
                                text=f"Gᴏᴛ FʟᴏᴏᴅWᴀɪᴛ ᴏғ {str(e.value)}s ғʀᴏᴍ [{message.from_user.first_name}](tg://user?id={message.from_user.id})\n\n**ᴜsᴇʀ ɪᴅ :** `{str(message.from_user.id)}`",
                                disable_web_page_preview=True, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
@@ -189,7 +189,7 @@ async def channel_receive_handler(bot: Client, message: Message):
 
         # Log multi-bot usage for auth channels (always sent by main bot)
         if is_auth_channel and Telegram.MULTI_BOT_MODE and processing_bot.me.id != bot.me.id:
-            await bot.send_message(  # Always use main bot for user communication
+            await FileStream.send_message(  # Always use main bot for user communication
                 chat_id=Telegram.ULOG_CHANNEL,
                 text=f"📤 **Auth Channel File Processed**\n\n"
                      f"🤖 **Backend Processor:** {processing_bot.me.first_name if hasattr(processing_bot, 'me') else 'ProcessorBot'}\n"
@@ -201,11 +201,11 @@ async def channel_receive_handler(bot: Client, message: Message):
     except FloodWait as w:
         print(f"Sleeping for {str(w.x)}s")
         await asyncio.sleep(w.x)
-        await bot.send_message(chat_id=Telegram.ULOG_CHANNEL,
+        await FileStream.send_message(chat_id=Telegram.ULOG_CHANNEL,
                                text=f"ɢᴏᴛ ғʟᴏᴏᴅᴡᴀɪᴛ ᴏғ {str(w.x)}s ғʀᴏᴍ {message.chat.title}\n\n**ᴄʜᴀɴɴᴇʟ ɪᴅ :** `{str(message.chat.id)}`",
                                disable_web_page_preview=True)
     except Exception as e:
-        await bot.send_message(chat_id=Telegram.ULOG_CHANNEL, text=f"**#EʀʀᴏʀTʀᴀᴄᴋᴇʙᴀᴄᴋ:** `{e}`",
+        await FileStream.send_message(chat_id=Telegram.ULOG_CHANNEL, text=f"**#EʀʀᴏʀTʀᴀᴄᴋᴇʙᴀᴄᴋ:** `{e}`",
                                disable_web_page_preview=True)
         print(f"Cᴀɴ'ᴛ Eᴅɪᴛ Bʀᴏᴀᴅᴄᴀsᴛ Mᴇssᴀɢᴇ!\nEʀʀᴏʀ:  **Gɪᴠᴇ ᴍᴇ ᴇᴅɪᴛ ᴘᴇʀᴍɪssɪᴏɴ ɪɴ ᴜᴘᴅᴀᴛᴇs ᴀɴᴅ ʙɪɴ Cʜᴀɴɴᴇʟ!{e}**")
     finally:

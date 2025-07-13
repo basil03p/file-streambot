@@ -48,7 +48,9 @@ async def initialize_clients():
                 max_concurrent_transmissions=10,  # Optimize for speed
             ).start()
             
-            client.id = (await client.get_me()).id
+            client_me = await client.get_me()
+            client.me = client_me  # Set the full me object
+            client.id = client_me.id
             work_loads[client_id] = 0
             return client_id, client
         except Exception as e:

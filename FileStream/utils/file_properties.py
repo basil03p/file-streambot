@@ -44,17 +44,17 @@ async def get_file_ids(client: Client | bool, db_id: str, multi_clients, message
         file_info = await db.get_file(db_id)
 
     file_id_info = file_info.setdefault("file_ids", {})
-    if not str(client.id) in file_id_info:
+    if not str(client.me.id) in file_id_info:
         logging.debug("Storing file_id in DB")
         log_msg = await send_file(FileStream, db_id, file_info['file_id'], message)
         msg = await client.get_messages(Telegram.FLOG_CHANNEL, log_msg.id)
         media = get_media_from_message(msg)
-        file_id_info[str(client.id)] = getattr(media, "file_id", "")
+        file_id_info[str(client.me.id)] = getattr(media, "file_id", "")
         await db.update_file_ids(db_id, file_id_info)
         logging.debug("Stored file_id in DB")
 
     logging.debug("Middle of get_file_ids")
-    file_id = FileId.decode(file_id_info[str(client.id)])
+    file_id = FileId.decode(file_id_info[str(client.me.id)])
     setattr(file_id, "file_size", file_info['file_size'])
     setattr(file_id, "mime_type", file_info['mime_type'])
     setattr(file_id, "file_name", file_info['file_name'])
@@ -137,7 +137,7 @@ async def update_file_id(msg_id, multi_clients):
     for client_id, client in multi_clients.items():
         log_msg = await client.get_messages(Telegram.FLOG_CHANNEL, msg_id)
         media = get_media_from_message(log_msg)
-        file_ids[str(client.id)] = getattr(media, "file_id", "")
+        file_ids[str(client.me.id)] = getattr(media, "file_id", "")
 
     return file_ids
 

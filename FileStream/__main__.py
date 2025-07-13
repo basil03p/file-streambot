@@ -40,6 +40,7 @@ async def start_services():
     
     await FileStream.start()
     bot_info = await FileStream.get_me()
+    FileStream.me = bot_info  # Set the full me object
     FileStream.id = bot_info.id
     FileStream.username = bot_info.username
     FileStream.fname = bot_info.first_name

@@ -1,0 +1,60 @@
+# Azure-optimized Dockerfile for FileStreamBot
+# This version is optimized for Azure Container Instances and Container Apps
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc-dev \
+    libffi-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies with compatible versions for Azure
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir motor==3.5.1 pymongo==4.8.0 && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash appuser && \
+    chown -R appuser:appuser /app
+
+# Copy application code
+COPY . .
+
+# Change ownership of the app directory
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Create health check endpoint
+RUN echo '#!/bin/bash\ncurl -f http://localhost:${PORT:-8080}/health || exit 1' > /app/healthcheck.sh && \
+    chmod +x /app/healthcheck.sh
+
+# Expose port (Azure will set this via PORT environment variable)
+EXPOSE 8080
+
+# Health check for Azure Container Instances
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
+
+# Set environment variables for Azure
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
+ENV BIND_ADDRESS=0.0.0.0
+
+# Labels for Azure
+LABEL maintainer="FileStreamBot"
+LABEL version="2.0"
+LABEL description="Enhanced FileStreamBot with Multi-Bot Support for Azure"
+
+# Start the application
+CMD ["python", "-m", "FileStream"]
