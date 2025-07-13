@@ -2,7 +2,8 @@ aiohttp==3.8.6
 pyrofork==2.3.25
 python-dotenv==1.0.0
 tgcrypto==1.2.5
-motor==3.3.2
+motor==3.5.1
+pymongo==4.8.0
 aiofiles==23.2.1
 dnspython==2.4.2
 requests==2.31.0

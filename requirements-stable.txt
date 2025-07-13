@@ -1,0 +1,40 @@
+# FileStreamBot Requirements - Stable Version
+# These versions are tested and known to work together
+
+# Core async HTTP framework
+aiohttp==3.9.1
+
+# Telegram client library (fork of Pyrogram with latest updates)
+pyrofork==2.3.25
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Telegram encryption
+tgcrypto==1.2.5
+
+# MongoDB async driver (compatible versions)
+motor==3.5.1
+pymongo==4.8.0
+
+# File handling
+aiofiles==23.2.1
+
+# DNS resolution for MongoDB
+dnspython==2.4.2
+
+# HTTP requests
+requests==2.31.0
+
+# Template engine for web pages
+jinja2==3.1.2
+
+# Event loop (Linux/macOS only - automatically skipped on Windows)
+uvloop==0.19.0; sys_platform != "win32"
+
+# System monitoring
+psutil==5.9.6
+
+# Additional dependencies for stability
+bson==0.5.10
+certifi==2024.8.30
